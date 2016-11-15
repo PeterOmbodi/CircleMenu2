@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <declare-styleable name="CircleMenu">
+
+        <attr name="pieColor" format="color"/>
+        <attr name="pieSelectedColor" format="color"/>
+        <attr name="lineStroke" format="dimension"/>
+
+    </declare-styleable>
+</resources>
