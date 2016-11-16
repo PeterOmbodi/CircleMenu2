@@ -41,6 +41,7 @@ class CircleMenu extends View {
     private ValueAnimator mScrollAnimator;
     private boolean isScroll;
     private Scroller mScroller;
+    private Drawable drawable;
 
     public CircleMenu(Context context) {
         super(context);
@@ -110,14 +111,15 @@ class CircleMenu extends View {
 
         for (Item it : itemList) {
             paintForeground.setColor(it.selected ? pieSelectedColor : pieColor);
+
             canvas.drawArc(rectF, it.startAngle, it.angle, true, paintForeground);
+//            canvas.drawArc(rectF, 0, 60, true, paintForeground);
 
-
-//            rotateDrawable =  it.icon;
+//            drawable =  it.icon;
 //            int top =(int) (rectF.height()/6)*4;
 //            int left =(int) rectF.width()/3;
-//            rotateDrawable.setBounds(top, left, top+left/2, left+left/2);
-            //rotateDrawable.setToDegrees(60f);
+//            drawable.setBounds(top, left, top+left/2, left+left/2);
+//            drawable.draw(canvas);
 //            canvas.rotate(60, rectF.centerX(),rectF.centerY());
 
             // Log.d(TAG, "onDraw it.id= " + it.id + "/ it.startAngle =" + it.startAngle + "/ it.angle = " + it.angle);
@@ -336,7 +338,7 @@ class CircleMenu extends View {
 
         float dot = (crossX * dx + crossY * dy);
         float sign = Math.signum(dot);
-        return l * sign;
+        return l * sign * 10 ;
     }
 
     private int normalizeAngel(int angel) {
