@@ -9,6 +9,7 @@ import android.graphics.RectF;
 import android.graphics.drawable.Drawable;
 import android.os.Build;
 import android.support.annotation.RequiresApi;
+import android.support.v4.content.ContextCompat;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.view.GestureDetector;
@@ -25,7 +26,7 @@ class CircleMenu extends View {
     private static final String TAG = "CircleMenu";
 
     public static final int FLING_VELOCITY_DOWNSCALE = 22;
-    private static final int HOME_ANGLE = 240;
+//    private static final int HOME_ANGLE = 240;
 
     private RectF rectF;
     private Paint paintForeground;
@@ -36,7 +37,10 @@ class CircleMenu extends View {
     private int pieSelectedColor;
     private float viewWidth;
     private float viewHeight;
-    private int currentAngle;
+    private int currentAngle; // текущий угол поворота (стартовый угол прорисовки меню)
+    private int setupAngle; //доворот для прорисовки иконок в вертикальном положении
+    private int sectorsQuantity;
+    private int restAngle; //остаток от 360/sectorsQuantity
     private ValueAnimator anim;
     private ValueAnimator mScrollAnimator;
     private boolean isScroll;
@@ -74,8 +78,9 @@ class CircleMenu extends View {
                 0, 0
         );
         try {
-            pieColor = a.getInt(R.styleable.CircleMenu_pieColor, getResources().getColor(R.color.colorPie));
-            pieSelectedColor = a.getInt(R.styleable.CircleMenu_pieSelectedColor, getResources().getColor(R.color.colorSelectedPie));
+
+            pieColor = a.getInt(R.styleable.CircleMenu_pieColor, ContextCompat.getColor(getContext(),R.color.colorPie));
+            pieSelectedColor = a.getInt(R.styleable.CircleMenu_pieSelectedColor, ContextCompat.getColor(getContext(),R.color.colorSelectedPie));
         } finally {
             // release the TypedArray so that it can be reused.
             a.recycle();
@@ -109,19 +114,25 @@ class CircleMenu extends View {
     protected void onDraw(Canvas canvas) {
         canvas.drawARGB(80, 102, 204, 255);
 
+        canvas.rotate(currentAngle + setupAngle, rectF.centerX(), rectF.centerY());
+
         for (Item it : itemList) {
+            //if (it.id == 1) {
             paintForeground.setColor(it.selected ? pieSelectedColor : pieColor);
+            canvas.drawArc(rectF, setupAngle, it.angle, true, paintForeground);
 
-            canvas.drawArc(rectF, it.startAngle, it.angle, true, paintForeground);
-//            canvas.drawArc(rectF, 0, 60, true, paintForeground);
+            drawable = it.icon;
+            int height = (int) (rectF.height() / 8);
+            int width = (int) (rectF.width() / 8);
+            int top = (int) ((int) rectF.centerY() - height * 3.5);
+            int left = (int) rectF.centerX() - width / 2;
+            //int left = (int) rectF.centerX() ;
 
-//            drawable =  it.icon;
-//            int top =(int) (rectF.height()/6)*4;
-//            int left =(int) rectF.width()/3;
-//            drawable.setBounds(top, left, top+left/2, left+left/2);
-//            drawable.draw(canvas);
-//            canvas.rotate(60, rectF.centerX(),rectF.centerY());
+            drawable.setBounds(left, top, left + width, top + height);
+            drawable.draw(canvas);
+            canvas.rotate(it.angle, rectF.centerX(), rectF.centerY());
 
+            //}
             // Log.d(TAG, "onDraw it.id= " + it.id + "/ it.startAngle =" + it.startAngle + "/ it.angle = " + it.angle);
         }
 
@@ -212,7 +223,7 @@ class CircleMenu extends View {
         // TODO: 15.11.2016 if (s==0) ???
         if (s > 0) {
             int a = itemList.get(s - 1).startAngle; //нач. выбранного сектора
-            int b = HOME_ANGLE; // куда идем
+            int b = setupAngle; // куда идем
             int c = normalizeAngel(b - a); // угол поворота
             int d = normalizeAngel(c + currentAngle); //конечный угол начала меню
             currentAngle = normalizeAngel(currentAngle); //текущий угол начала меню
@@ -236,14 +247,17 @@ class CircleMenu extends View {
         // TODO: 15.11.2016 set border size
         rectF = new RectF(50, 50, squareSize - 50, squareSize - 50);
 
-        currentAngle = HOME_ANGLE;
+        sectorsQuantity = 7;
+        currentAngle = 270 - 180 / sectorsQuantity; // делитель - колво секторов
+        restAngle = 360 % sectorsQuantity;
 
-        addItem(getResources().getDrawable(android.R.drawable.ic_btn_speak_now));
-        addItem(getResources().getDrawable(android.R.drawable.ic_menu_call));
-        addItem(getResources().getDrawable(android.R.drawable.ic_media_rew));
-        addItem(getResources().getDrawable(android.R.drawable.ic_media_play));
-        addItem(getResources().getDrawable(android.R.drawable.ic_media_ff));
-        addItem(getResources().getDrawable(android.R.drawable.ic_media_pause));
+        addItem(ContextCompat.getDrawable(getContext(), android.R.drawable.ic_media_previous));
+        addItem(ContextCompat.getDrawable(getContext(), android.R.drawable.ic_media_rew));
+        addItem(ContextCompat.getDrawable(getContext(), android.R.drawable.ic_media_pause));
+        addItem(ContextCompat.getDrawable(getContext(), android.R.drawable.ic_media_play));
+        addItem(ContextCompat.getDrawable(getContext(), android.R.drawable.ic_media_ff));
+        addItem(ContextCompat.getDrawable(getContext(), android.R.drawable.ic_media_next));
+        addItem(ContextCompat.getDrawable(getContext(), android.R.drawable.ic_btn_speak_now));
 
     }
 
@@ -251,62 +265,59 @@ class CircleMenu extends View {
         float r = rectF.width() / 2;
         float dx = x - rectF.centerX();
         float dy = y - rectF.centerY();
-        boolean result = (r * r) >= (dx * dx + dy * dy);
-        return result;
+        return (r * r) >= (dx * dx + dy * dy);
     }
 
     private int inSector(float x, float y, RectF rectF) {
         float dx = x - rectF.centerX();
         float dy = y - rectF.centerY();
-        double result = (180 * Math.atan2(dy, dx)) / Math.PI;
+        int result = (int) ((180 * Math.atan2(dy, dx)) / Math.PI);
         result = (result > 0) ? result : 360 + result;
         int retVal = 0;
         for (Item it : itemList) {
             it.selected = false;
-            if (it.startAngle <= result && it.startAngle + it.angle >= result) {
+            if ((it.startAngle + it.angle > 360 &&
+                    (it.startAngle <= result || normalizeAngel(it.startAngle + it.angle) >= result)) ||
+                    (it.startAngle <= result && it.startAngle + it.angle >= result)) {
                 retVal = it.id;
                 it.selected = true;
             }
         }
+
         return retVal;
     }
 
 
     private class Item {
-
         private int id;
         private int color;
         private int startAngle;
         private int angle;
         private boolean selected;
         private Drawable icon;
-
     }
 
     private int addItem(Drawable icon) {
         Item it = new Item();
         it.id = itemList.size() + 1;
-        it.selected = (itemList.size() == 0);
+        it.selected = (it.id == sectorsQuantity);
         it.icon = icon;
         itemList.add(it);
         onItemsChanged();
         return itemList.size() - 1;
-
     }
 
     private void onItemsChanged() {
 
         int total = itemList.size();
-        int startAngle = currentAngle;
-        int endAngle;
+        int startAngle = currentAngle + 120;
         int sectorAngle = (int) (360.0f / total);
-
         for (Item it : itemList) {
-            //it.startAngle = currentAngle;
             it.startAngle = normalizeAngel(startAngle);
-            endAngle = (int) ((float) startAngle + sectorAngle);
-            it.angle = sectorAngle;
-            startAngle = endAngle;
+            startAngle = (int) ((float) startAngle + sectorAngle);
+            it.angle = sectorAngle + ((it.selected) ? restAngle : 0);
+            setupAngle = 270 - sectorAngle / 2 - restAngle - 1;
+//            Log.d(TAG, "onItemsChanged.setupAngle =  " + setupAngle + "/ it.id = " + it.id + "/ it.selected =" + it.selected+"/ it.angle= "+it.angle );
         }
     }
 
@@ -338,7 +349,7 @@ class CircleMenu extends View {
 
         float dot = (crossX * dx + crossY * dy);
         float sign = Math.signum(dot);
-        return l * sign * 10 ;
+        return l * sign * 10;
     }
 
     private int normalizeAngel(int angel) {
